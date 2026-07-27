@@ -1697,8 +1697,11 @@ function buildCard(customer, index) {
 function isWorkflowStepApplicable(customer, stepIndex) {
   if (customer.redirected === 'No') return stepIndex === 0;
   if (customer.is18OrOlder === 'No') return stepIndex <= 1;
-  if (stepIndex === 4 || stepIndex === 5) return customer.interested === 'No';
-  if (stepIndex === 6 || stepIndex === 7 || stepIndex === 8) return customer.interested === 'Yes';
+  if (stepIndex === 4 || stepIndex === 5) {
+    return customer.interested === 'No' || (customer.interested === 'Yes' && customer.sold === 'No');
+  }
+  if (stepIndex === 6 || stepIndex === 7) return customer.interested === 'Yes';
+  if (stepIndex === 8) return customer.interested === 'Yes' && customer.sold === 'Yes';
   return true;
 }
 
@@ -1824,6 +1827,8 @@ function answerWorkflowQuestion(customer, index, stepIndex, value) {
       customer.businessCard = null;
     }
     customer.workflowStep = nextWorkflowStep(customer, stepIndex);
+  } else if (stepIndex === 5) {
+    customer.workflowStep = WORKFLOW_STEPS.length;
   } else if (stepIndex === 6) {
     if (value === 'No') {
       customer.demoProduct = null;
@@ -1835,8 +1840,11 @@ function answerWorkflowQuestion(customer, index, stepIndex, value) {
   } else if (stepIndex === 7) {
     if (value === 'No') {
       customer.soldProduct = 'NONE';
+      customer.mgmReferralPamphlet = null;
       customer.workflowStep = nextWorkflowStep(customer, stepIndex);
     } else {
+      customer.prePurchasePamphlet = null;
+      customer.businessCard = null;
       if (customer.soldProduct === 'NONE') customer.soldProduct = null;
       customer.workflowStep = stepIndex;
     }
@@ -2121,7 +2129,7 @@ function copyReport() {
         if (customer.is18OrOlder === 'Yes') {
           if (customer.educatedAlternative) line += ` | Educated: ${customer.educatedAlternative}`;
           if (customer.interested) line += ` | Interested: ${customer.interested}`;
-          if (customer.interested === 'No') {
+          if (customer.interested === 'No' || customer.sold === 'No') {
             if (customer.prePurchasePamphlet) line += ` | Pre-Purchase Pamphlet: ${customer.prePurchasePamphlet}`;
             if (customer.businessCard) line += ` | Business Card: ${customer.businessCard}`;
           } else {
@@ -2285,7 +2293,7 @@ function showSavedRecord(record) {
     const demoDetail = customer.demo === 'Yes' && customer.demoProduct
       ? `${customer.demoProduct[0].toUpperCase()}${customer.demoProduct.slice(1)} x${safeQuantity(customer.demoQuantity)}`
       : (customer.demo || '-');
-    const followUpDetail = customer.interested === 'No'
+    const followUpDetail = customer.interested === 'No' || customer.sold === 'No'
       ? ` - Pre-Purchase Pamphlet: ${customer.prePurchasePamphlet || '-'} - Business Card: ${customer.businessCard || '-'}`
       : ` - MGM Referral Program Pamphlet: ${customer.mgmReferralPamphlet || '-'}`;
     details.textContent = `Redirected: ${customer.redirected || '-'} - Age verified: ${customer.is18OrOlder || '-'} - Educated alternative: ${customer.educatedAlternative || '-'} - Interested: ${customer.interested || '-'}${customer.interested === 'Yes' ? ` - Demo: ${demoDetail} - Sold: ${customer.sold || '-'}${customer.sold === 'Yes' && customer.soldProduct ? ` (${customer.soldProduct})` : ''}` : ''}${followUpDetail}`;
