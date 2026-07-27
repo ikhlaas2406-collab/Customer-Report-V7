@@ -294,6 +294,7 @@
   .traffic-slider::-moz-range-track { height: 7px; border: 0; border-radius: 999px; background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-percent), var(--surface-inset) var(--slider-percent), var(--surface-inset) 100%); }
   .traffic-slider::-moz-range-progress { height: 7px; border-radius: 999px; background: var(--slider-color); }
   .traffic-slider::-moz-range-thumb { width: 15px; height: 15px; border: 2px solid var(--surface-raised); border-radius: 50%; background: var(--slider-color); box-shadow: 0 2px 8px #0006; }
+  .traffic-readout { margin: 2px 0 5px; color: var(--text); font-size: 12px; font-weight: 700; text-align: center; }
   .traffic-ticks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin-top: -2px; }
   .traffic-tick { color: var(--muted); font-size: 10px; text-align: center; }
   .traffic-tick.active { color: var(--text); font-weight: 700; }
@@ -1216,6 +1217,20 @@
     .stat-chip .num { font-size: 12px; }
     .stat-chip .label { font-size: 8px; letter-spacing: -.2px; }
   }
+  .report-preview {
+    min-height: 40px;
+    max-height: 260px;
+    margin: 0;
+    padding: 11px 12px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface-inset);
+    color: var(--text);
+    font: 11px/1.5 var(--mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 </style>
 </head>
 <body>
@@ -1259,6 +1274,10 @@
     <div class="panel">
       <label class="field-label" for="extraNotes">Extra notes</label>
       <textarea class="extra-notes" id="extraNotes" placeholder="Add extra notes to include in the report..."></textarea>
+    </div>
+    <div class="panel report-preview-panel">
+      <div class="field-label">Copy preview</div>
+      <pre class="report-preview" id="reportPreview" aria-live="polite"></pre>
     </div>
     <div class="panel">
       <div class="report-actions">
@@ -1325,8 +1344,29 @@ const LEGACY_CURRENT_KEY = 'nicotine_report_v2';
 const SAVED_KEY = 'customer_report_saved_v1';
 const INVENTORY_KEY = 'customer_report_inventory_v1';
 const THEME_KEY = 'customer_report_theme_v1';
-const TRAFFIC_LABELS = ['None', 'Very Low', 'Low', 'Regular', 'High', 'Very High'];
-const TRAFFIC_COLORS = ['#7c879b', '#53c6e8', '#36d477', '#f4b64f', '#ef974c', '#f16b72'];
+const TRAFFIC_MAX = 30;
+const TRAFFIC_TICKS = [
+  { value: 0, label: '0' },
+  { value: 3, label: '3' },
+  { value: 9, label: '9' },
+  { value: 15, label: '15' },
+  { value: 21, label: '21' },
+  { value: 22, label: '22+' }
+];
+function trafficLabel(value) {
+  if (value <= 3) return 'Very Low';
+  if (value <= 9) return 'Low';
+  if (value <= 15) return 'Regular';
+  if (value <= 21) return 'High';
+  return 'Very High';
+}
+function trafficColor(value) {
+  if (value <= 3) return '#53c6e8';
+  if (value <= 9) return '#36d477';
+  if (value <= 15) return '#f4b64f';
+  if (value <= 21) return '#ef974c';
+  return '#f16b72';
+}
 const WORKFLOW_STEPS = [
   { field: 'redirected', label: 'Redirected' },
   { field: 'is18OrOlder', label: 'Age Verification' },
@@ -1461,7 +1501,7 @@ function normalizeCurrent(raw) {
   }
   return {
     customers: normalizeCustomers(raw?.customers),
-    trafficIndex: Number.isInteger(raw?.trafficIndex) && raw.trafficIndex >= 0 && raw.trafficIndex < TRAFFIC_LABELS.length
+    trafficIndex: Number.isInteger(raw?.trafficIndex) && raw.trafficIndex >= 0 && raw.trafficIndex <= TRAFFIC_MAX
       ? raw.trafficIndex : -1,
     extraNotes: cleanText(raw?.extraNotes)
   };
@@ -1578,6 +1618,7 @@ function render() {
   document.getElementById('extraNotes').value = current.extraNotes;
   updateStats();
   renderTraffic();
+  renderReportPreview();
 }
 
 function buildCard(customer, index) {
@@ -1652,6 +1693,7 @@ function buildCard(customer, index) {
   notes.addEventListener('input', event => {
     customer.notes = event.target.value;
     saveCurrent();
+    renderReportPreview();
   });
 
   body.append(workflow, notesLabel, notes);
@@ -1855,6 +1897,7 @@ function answerWorkflowQuestion(customer, index, stepIndex, value) {
   saveCurrent();
   rerenderCard(index);
   updateStats();
+  renderReportPreview();
 }
 
 function buildCustomerWorkflow(customer, index) {
@@ -2083,18 +2126,21 @@ function updateStats() {
 
 function renderTraffic() {
   const track = document.getElementById('trafficTrack');
-  const selected = current.trafficIndex < 0 ? 0 : current.trafficIndex;
+  const selected = current.trafficIndex < 0 ? 0 : Math.min(TRAFFIC_MAX, current.trafficIndex);
   track.innerHTML = `<div class="traffic-slider-wrap">
-    <input class="traffic-slider" id="trafficSlider" type="range" min="0" max="5" step="1" value="${selected}" aria-label="Traffic level">
-    <div class="traffic-ticks">${TRAFFIC_LABELS.map((label, index) => `<span class="traffic-tick${selected === index ? ' active' : ''}">${label}</span>`).join('')}</div>
+    <div class="traffic-readout" id="trafficReadout">${selected} — ${trafficLabel(selected)}</div>
+    <input class="traffic-slider" id="trafficSlider" type="range" min="0" max="${TRAFFIC_MAX}" step="1" value="${selected}" aria-label="Traffic count">
+    <div class="traffic-ticks">${TRAFFIC_TICKS.map(tick => `<span class="traffic-tick" data-value="${tick.value}">${tick.label}</span>`).join('')}</div>
   </div>`;
   const slider = document.getElementById('trafficSlider');
   const updateSliderVisual = (index) => {
-    slider.style.setProperty('--slider-color', TRAFFIC_COLORS[index]);
-    slider.style.setProperty('--slider-percent', `${(index / (TRAFFIC_LABELS.length - 1)) * 100}%`);
-    slider.setAttribute('aria-valuetext', TRAFFIC_LABELS[index]);
+    slider.style.setProperty('--slider-color', trafficColor(index));
+    slider.style.setProperty('--slider-percent', `${(index / TRAFFIC_MAX) * 100}%`);
+    slider.setAttribute('aria-valuetext', `${index} — ${trafficLabel(index)}`);
+    document.getElementById('trafficReadout').textContent = `${index} — ${trafficLabel(index)}`;
+    const activeTick = TRAFFIC_TICKS.reduce((active, tick, tickIndex) => tick.value <= index ? tickIndex : active, 0);
     track.querySelectorAll('.traffic-tick').forEach((tick, tickIndex) => {
-      tick.classList.toggle('active', tickIndex === index);
+      tick.classList.toggle('active', tickIndex === activeTick);
     });
   };
   updateSliderVisual(selected);
@@ -2103,6 +2149,7 @@ function renderTraffic() {
     current.trafficIndex = index;
     saveCurrent();
     updateSliderVisual(index);
+    renderReportPreview();
   });
   slider.addEventListener('change', () => {
     slider.classList.remove('settling');
@@ -2111,10 +2158,10 @@ function renderTraffic() {
   });
 }
 
-function copyReport() {
+function buildReportText() {
   const lines = [];
   if (weatherShort) lines.push(weatherShort);
-  if (current.trafficIndex >= 0) lines.push(`Traffic: ${TRAFFIC_LABELS[current.trafficIndex]}`);
+  if (current.trafficIndex >= 0) lines.push(`Traffic: ${trafficLabel(current.trafficIndex)}`);
   const checked = current.customers.filter(customer => customer.checkedIn);
   if (checked.length === 0) {
     lines.push('No customers checked in yet.');
@@ -2150,7 +2197,16 @@ function copyReport() {
     });
   }
   if (current.extraNotes.trim()) lines.push(current.extraNotes.trim());
-  const text = lines.join('\n');
+  return lines.join('\n');
+}
+
+function renderReportPreview() {
+  const preview = document.getElementById('reportPreview');
+  if (preview) preview.textContent = buildReportText() || 'Your copied notes will appear here.';
+}
+
+function copyReport() {
+  const text = buildReportText();
   const copied = navigator.clipboard?.writeText
     ? Promise.race([
         navigator.clipboard.writeText(text),
@@ -2275,7 +2331,7 @@ function showSavedRecord(record) {
   content.replaceChildren();
   const summary = document.createElement('p');
   summary.className = 'detail-line';
-  summary.textContent = `Saved ${formatDateTime(record.savedAt)}${record.trafficIndex >= 0 ? ` - Traffic: ${TRAFFIC_LABELS[record.trafficIndex]}` : ''}`;
+  summary.textContent = `Saved ${formatDateTime(record.savedAt)}${record.trafficIndex >= 0 ? ` - Traffic: ${trafficLabel(record.trafficIndex)}` : ''}`;
   content.appendChild(summary);
   if (record.extraNotes) {
     const extra = document.createElement('p');
@@ -2401,9 +2457,11 @@ async function fetchWeather() {
     const code = data.current.weather_code;
     weatherShort = `${temp}°C ${WMO_ICONS[code] || ''} ${WMO[code] || 'Unknown'}`.replace(/\s+/g, ' ').trim();
     document.getElementById('weatherBadge').textContent = weatherShort;
+    renderReportPreview();
   } catch (error) {
     weatherShort = '';
     document.getElementById('weatherBadge').textContent = 'Weather unavailable';
+    renderReportPreview();
   }
 }
 
@@ -2422,6 +2480,7 @@ document.getElementById('addCustomerBtn').addEventListener('click', () => {
 document.getElementById('extraNotes').addEventListener('input', event => {
   current.extraNotes = event.target.value;
   saveCurrent();
+  renderReportPreview();
 });
 document.getElementById('saveBtn').addEventListener('click', saveSnapshot);
 document.getElementById('copyBtn').addEventListener('click', copyReport);
