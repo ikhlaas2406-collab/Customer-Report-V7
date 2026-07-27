@@ -806,6 +806,51 @@
     color: #172033;
   }
   body[data-theme="light"] .app-title { color: #172033; }
+  body[data-theme="light"] .checkin-btn.active {
+    color: #063b1b;
+    border-color: #36d477;
+    background: #36d477;
+    box-shadow: 0 8px 22px #36d47755, inset 0 1px #ffffff88;
+  }
+  body[data-theme="light"] .customer-card.checked-in {
+    border-color: #36d47788;
+    background: linear-gradient(135deg, #e9fff1, #ffffff 68%);
+    box-shadow: 0 14px 32px #36d47722, inset 0 1px #ffffff;
+  }
+  .customer-card:focus-within {
+    border-color: #8ab8ff99;
+    box-shadow: 0 16px 34px #5b9bff24, inset 0 1px #ffffff35;
+  }
+  header {
+    top: max(10px, env(safe-area-inset-top));
+    margin-top: max(10px, env(safe-area-inset-top));
+    isolation: isolate;
+  }
+  .header-top { min-width: 0; gap: 10px; }
+  .app-title { min-width: 0; }
+  .header-badges { flex-shrink: 0; }
+  .stats-row { margin-top: 12px; }
+  .customer-card,
+  .saved-record { touch-action: pan-y; }
+  .customer-delete-btn,
+  .saved-delete-btn {
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: 78px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #71819a, #53627a);
+    box-shadow: 0 10px 22px #1b263866, inset 0 1px #ffffff30;
+    transition: transform .18s ease, filter .18s ease;
+  }
+  .customer-delete-btn:active,
+  .saved-delete-btn:active { filter: brightness(1.12); transform: scale(.97); }
+  body[data-theme="light"] .customer-delete-btn,
+  body[data-theme="light"] .saved-delete-btn {
+    background: linear-gradient(145deg, #b5c2d3, #8e9db2);
+    color: #172033;
+    box-shadow: 0 10px 22px #7890ae3d, inset 0 1px #ffffffaa;
+  }
 
 </style>
 </head>
