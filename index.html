@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10131b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Customer Report">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ikhlaas2406-collab/Customer-Report-V5/main/logo.PNG">
+<link rel="apple-touch-icon" sizes="716x716" href="https://raw.githubusercontent.com/ikhlaas2406-collab/Customer-Report-V5/main/logo.PNG">
+<link rel="icon" type="image/svg+xml" href="./apple-touch-icon.svg">
+<title>Daily Customer Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #10131b;
+    --surface: #191d28;
+    --surface-raised: #202635;
+    --surface-inset: #121620;
+    --border: #30384e;
+    --accent: #5b9bff;
+    --accent-2: #8868d8;
+    --green: #36d477;
+    --red: #f16b72;
+    --amber: #f4b64f;
+    --text: #f0f3f8;
+    --muted: #9ba6ba;
+    --muted-2: #6e7990;
+    --sans: "DM Sans", sans-serif;
+    --display: "Syne", sans-serif;
+    --mono: "DM Mono", monospace;
+    --shadow-raised: 10px 10px 22px #090b10, -8px -8px 18px #252c3c;
+    --shadow-soft: 5px 5px 12px #090b10, -4px -4px 10px #252c3c;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+  }
+  button, input, textarea { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 3px solid #8bb8ff;
+    outline-offset: 2px;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 16px 14px;
+    background: rgba(25, 29, 40, .94);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
+    backdrop-filter: blur(16px);
+  }
+  .header-top, .section-heading, .saved-record-top, .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .app-title {
+    color: var(--text);
+    font: 800 19px var(--display);
+    letter-spacing: -.6px;
+  }
+  .app-title span { color: var(--accent); }
+  .date-badge, .weather-badge {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-inset);
+    color: var(--muted);
+    font: 11px var(--mono);
+    white-space: nowrap;
+  }
+  .weather-badge { color: #8bd8fa; }
+  .header-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+  .stat-chip {
+    min-width: 0;
+    padding: 7px 4px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-soft);
+    color: var(--muted);
+    font: 10px var(--mono);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stat-chip .num { margin-right: 2px; color: var(--accent); font-size: 14px; }
+  .stat-chip.green .num { color: var(--green); }
+  .stat-chip.amber .num { color: var(--amber); }
+  .stat-chip.purple .num { color: #b69cff; }
+
+  main { width: min(100%, 880px); margin: 0 auto; }
+  .view { display: none; padding: 16px 12px 24px; }
+  .view.active { display: block; }
+  .section-heading { margin: 0 2px 12px; }
+  .section-title {
+    margin: 0;
+    color: var(--text);
+    font: 700 16px var(--display);
+  }
+  .section-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+  .section-label {
+    margin: 4px 2px 10px;
+    color: var(--muted-2);
+    font: 11px var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .customer-list { display: flex; flex-direction: column; gap: 12px; }
+  .customer-card, .panel, .inventory-card, .saved-record {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-raised);
+  }
+  .customer-card { overflow: hidden; }
+  .customer-card.checked-in {
+    border-color: #36d47766;
+    background: linear-gradient(135deg, #1c2b25, var(--surface) 58%);
+  }
+  .card-top { display: flex; align-items: center; gap: 10px; padding: 14px; }
+  .customer-num {
+    flex: 0 0 26px;
+    color: var(--muted-2);
+    text-align: center;
+    font: 11px var(--mono);
+  }
+  .customer-name {
+    min-width: 0;
+    width: 100%;
+    flex: 1;
+    padding: 4px 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .customer-name:focus { border-bottom-color: var(--accent); }
+  .customer-name::placeholder { color: var(--muted-2); }
+  .card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .checkin-btn, .expand-btn, .icon-btn, .add-btn, .primary-btn, .secondary-btn, .save-open-btn {
+    min-height: 42px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: transform .15s, background .15s, border-color .15s;
+  }
+  .checkin-btn:active, .expand-btn:active, .icon-btn:active, .add-btn:active,
+  .primary-btn:active, .secondary-btn:active, .save-open-btn:active { transform: scale(.97); }
+  .checkin-btn {
+    padding: 8px 12px;
+    color: var(--muted);
+    border-color: var(--border);
+    background: var(--surface-raised);
+    font: 700 12px var(--display);
+  }
+  .checkin-btn.active {
+    color: #07130c;
+    border-color: var(--green);
+    background: var(--green);
+    box-shadow: 0 3px 14px #36d47744;
+  }
+  .time-tag {
+    padding: 5px 7px;
+    border: 1px solid #36d47744;
+    border-radius: 7px;
+    background: #36d47718;
+    color: var(--green);
+    font: 11px var(--mono);
+    white-space: nowrap;
+  }
+  .expand-btn, .icon-btn {
+    width: 42px;
+    padding: 0;
+    color: var(--muted);
+    border-color: var(--border);
+    background: var(--surface-raised);
+    font-size: 17px;
+  }
+  .card-body {
+    display: none;
+    gap: 12px;
+    padding: 14px;
+    border-top: 1px solid var(--border);
+    background: rgba(10, 13, 20, .16);
+  }
+  .card-body.open { display: flex; flex-direction: column; }
+  .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .control-group { min-width: 0; }
+  .control-label, .field-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font: 11px var(--mono);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .choice-group { display: flex; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; }
+  .choice-btn {
+    flex: 1;
+    min-height: 42px;
+    padding: 8px 5px;
+    border: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface-inset);
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .choice-btn:last-child { border-right: 0; }
+  .choice-btn[aria-pressed="true"] { background: var(--accent); color: #071326; }
+  .choice-btn[aria-pressed="true"].positive { background: var(--green); color: #07130c; }
+  .choice-btn[aria-pressed="true"].negative { background: var(--red); color: #22070a; }
+  .choice-btn[aria-pressed="true"].product { background: var(--accent-2); color: #100a20; }
+  .notes-field, .extra-notes {
+    width: 100%;
+    min-height: 74px;
+    padding: 11px 12px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    outline: 0;
+    background: var(--surface-inset);
+    color: var(--text);
+  }
+  .notes-field::placeholder, .extra-notes::placeholder { color: var(--muted-2); }
+  .notes-field:focus, .extra-notes:focus { border-color: var(--accent); }
+
+  .add-customer-wrap { display: flex; justify-content: center; padding: 16px 0 6px; }
+  .add-btn, .primary-btn {
+    width: 100%;
+    padding: 11px 16px;
+    color: #081329;
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: 0 5px 18px #5b9bff33;
+    font-weight: 700;
+  }
+  .add-btn { max-width: 430px; }
+  .panel { padding: 14px; margin-top: 14px; }
+  .traffic-track { display: block; }
+  .traffic-slider-wrap { position: relative; width: 100%; padding: 4px 2px 0; }
+  .traffic-slider {
+    width: 100%;
+    height: 24px;
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+  }
+  .traffic-slider::-webkit-slider-runnable-track { height: 7px; border: 0; border-radius: 999px; background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-percent), var(--surface-inset) var(--slider-percent), var(--surface-inset) 100%); }
+  .traffic-slider::-webkit-slider-thumb { width: 19px; height: 19px; margin-top: -7px; border: 2px solid var(--surface-raised); border-radius: 50%; background: var(--slider-color); box-shadow: 0 2px 8px #0006; -webkit-appearance: none; }
+  .traffic-slider::-moz-range-track { height: 7px; border: 0; border-radius: 999px; background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-percent), var(--surface-inset) var(--slider-percent), var(--surface-inset) 100%); }
+  .traffic-slider::-moz-range-progress { height: 7px; border-radius: 999px; background: var(--slider-color); }
+  .traffic-slider::-moz-range-thumb { width: 15px; height: 15px; border: 2px solid var(--surface-raised); border-radius: 50%; background: var(--slider-color); box-shadow: 0 2px 8px #0006; }
+  .traffic-ticks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin-top: -2px; }
+  .traffic-tick { color: var(--muted); font-size: 10px; text-align: center; }
+  .traffic-tick.active { color: var(--text); font-weight: 700; }
+  .traffic-option {
+    min-height: 42px;
+    padding: 6px 2px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-inset);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .traffic-option[aria-pressed="true"] { color: #071326; border-color: transparent; background: var(--traffic-color, var(--accent)); }
+  .report-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .report-actions > button { flex: 1; }
+  .secondary-btn {
+    padding: 11px 16px;
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-raised);
+    font-weight: 700;
+  }
+  .status-message {
+    min-height: 22px;
+    margin-top: 8px;
+    color: var(--green);
+    text-align: center;
+    font: 11px var(--mono);
+  }
+
+  .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .inventory-card { padding: 16px; }
+  .inventory-name { color: var(--text); font: 700 16px var(--display); }
+  .inventory-help { margin: 5px 0 14px; color: var(--muted); font-size: 12px; }
+  .inventory-controls { display: flex; align-items: center; gap: 10px; }
+  .quantity {
+    width: 64px;
+    min-width: 64px;
+    padding: 5px 4px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: 0;
+    background: var(--surface-inset);
+    color: var(--accent);
+    text-align: center;
+    font: 700 16px var(--mono);
+    touch-action: manipulation;
+  }
+  .quantity:focus { border-color: var(--accent); }
+  .inventory-controls .icon-btn { font-size: 22px; }
+  .reset-inventory { margin-top: 14px; width: 100%; }
+
+  .saved-list { display: flex; flex-direction: column; gap: 10px; }
+  .saved-swipe-shell { position: relative; overflow: hidden; border-radius: 16px; background: var(--red); }
+  .saved-record { position: relative; z-index: 1; padding: 14px; transition: transform .2s ease; }
+  .saved-record.swiped { transform: translateX(-88px); }
+  .saved-delete-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 88px;
+    border: 0;
+    border-radius: 0;
+    background: var(--red);
+    color: #22070a;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .saved-record h3 { margin: 0; color: var(--text); font: 700 14px var(--display); }
+  .saved-meta { margin-top: 4px; color: var(--muted); font: 11px var(--mono); }
+  .saved-preview { margin: 10px 0 12px; color: var(--muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .save-open-btn { min-height: 38px; padding: 8px 12px; color: var(--accent); border-color: #5b9bff66; background: #5b9bff14; font-weight: 700; }
+  .empty-state { padding: 30px 18px; color: var(--muted); text-align: center; }
+
+  .app-bottom {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: rgba(19, 23, 33, .96);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .3);
+    backdrop-filter: blur(16px);
+  }
+  .nav-inner { display: grid; grid-template-columns: repeat(3, 1fr); width: min(100%, 620px); gap: 6px; }
+  .nav-btn {
+    min-height: 58px;
+    padding: 5px 6px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .nav-btn .nav-icon { display: block; margin-bottom: 3px; font-size: 19px; }
+  .svg-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    align-items: center;
+    justify-content: center;
+    vertical-align: -4px;
+  }
+  .svg-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-btn .svg-icon { display: flex; width: 20px; height: 20px; margin: 0 auto 3px; }
+  .nav-btn[aria-current="page"] {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-raised);
+    box-shadow: inset 2px 2px 6px #0a0c12, inset -2px -2px 5px #2a3244;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(4, 6, 10, .76);
+  }
+  .modal-backdrop.hidden { display: none; }
+  .modal {
+    width: min(100%, 650px);
+    max-height: min(86vh, 720px);
+    overflow: auto;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow-raised);
+  }
+  .modal h2 { margin: 0; font: 700 17px var(--display); }
+  .modal-content { margin-top: 14px; }
+  .detail-customer { padding: 12px 0; border-top: 1px solid var(--border); }
+  .detail-customer h3 { margin: 0 0 6px; font-size: 14px; }
+  .detail-line { margin: 4px 0; color: var(--muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  @media (min-width: 700px) {
+    .view { padding-right: 20px; padding-left: 20px; }
+    .customer-list { gap: 14px; }
+    .control-row { grid-template-columns: repeat(3, 1fr); }
+    .inventory-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    header { padding-right: max(20px, calc((100vw - 880px) / 2 + 20px)); padding-left: max(20px, calc((100vw - 880px) / 2 + 20px)); }
+  }
+  @media (max-width: 460px) {
+    .card-top { gap: 6px; padding: 10px 8px; }
+    .card-actions { gap: 4px; }
+    .customer-num { flex-basis: 22px; }
+    .checkin-btn {
+      min-width: 72px;
+      min-height: 34px;
+      padding: 0 8px;
+      font-size: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .expand-btn {
+      width: 34px;
+      min-height: 34px;
+      font-size: 14px;
+    }
+    .time-tag {
+      display: inline-flex;
+      min-width: 52px;
+      justify-content: center;
+      padding: 4px 5px;
+      font-size: 10px;
+    }
+    .card-body { gap: 9px; padding: 11px 10px; }
+    .control-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .control-label {
+      min-height: 24px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      font-size: 9px;
+      letter-spacing: .1px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .choice-btn {
+      min-height: 34px;
+      padding: 5px 2px;
+      font-size: 11px;
+    }
+  }
+  @media (max-width: 380px) {
+    .stats-row { gap: 3px; }
+    .stat-chip { padding: 6px 2px; font-size: 8px; }
+    .stat-chip .num { margin-right: 1px; font-size: 13px; }
+  }
+
+  /* Local Apple-style Liquid Glass redesign preview */
+  :root {
+    --bg: #080d1c;
+    --surface: #ffffff10;
+    --surface-raised: #ffffff16;
+    --surface-inset: #050a16a8;
+    --border: #ffffff25;
+    --text: #f7f9ff;
+    --muted: #aab4c8;
+    --muted-2: #78849e;
+    --shadow-raised: 0 22px 55px #0006, inset 0 1px #ffffff18;
+    --shadow-soft: 0 10px 30px #0004, inset 0 1px #ffffff16;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "DM Sans", sans-serif;
+    --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "DM Sans", sans-serif;
+  }
+  html, body { background: #080d1c; }
+  body {
+    position: relative;
+    background:
+      radial-gradient(circle at 6% -5%, #5b9bff62 0, transparent 30%),
+      radial-gradient(circle at 98% 18%, #a56bff4f 0, transparent 28%),
+      radial-gradient(circle at 55% 108%, #00c2ff2b 0, transparent 33%),
+      #080d1c;
+    font-size: 14px;
+  }
+  body::before, body::after {
+    position: fixed;
+    z-index: -1;
+    width: 230px;
+    height: 230px;
+    border-radius: 50%;
+    content: "";
+    filter: blur(58px);
+    opacity: .42;
+    pointer-events: none;
+  }
+  body::before { top: 24%; left: -130px; background: #4c88ff; }
+  body::after { top: 62%; right: -130px; background: #a863ff; }
+  header {
+    position: sticky;
+    top: 12px;
+    width: min(calc(100% - 24px), 900px);
+    margin: 12px auto 0;
+    padding: 18px;
+    border: 1px solid #ffffff2d;
+    border-radius: 28px;
+    background: #101a32b8;
+    box-shadow: 0 22px 60px #0006, inset 0 1px #ffffff22;
+    backdrop-filter: blur(32px) saturate(170%);
+  }
+  .header-top { gap: 16px; }
+  .app-title { font-size: 22px; letter-spacing: -1px; }
+  .app-title span { color: #8ab8ff; }
+  .date-badge, .weather-badge {
+    padding: 7px 10px;
+    border-color: #ffffff24;
+    border-radius: 14px;
+    background: #ffffff0f;
+    box-shadow: inset 0 1px #ffffff16;
+  }
+  .stats-row { gap: 8px; margin-top: 16px; }
+  .stat-chip {
+    min-height: 42px;
+    padding: 8px 6px;
+    border-color: #ffffff24;
+    border-radius: 17px;
+    background: #ffffff0e;
+    box-shadow: var(--shadow-soft);
+  }
+  .stat-chip .num { font-size: 15px; }
+  main { width: min(100%, 920px); }
+  .view { padding: 22px 12px 30px; }
+  .section-heading { margin: 0 4px 16px; }
+  .section-title { font-size: 21px; letter-spacing: -.5px; }
+  .section-subtitle { color: #aeb9cf; font-size: 13px; }
+  .customer-list { gap: 14px; }
+  .customer-card, .panel, .inventory-card, .saved-record {
+    border-color: #ffffff27;
+    border-radius: 24px;
+    background: #ffffff0c;
+    box-shadow: var(--shadow-raised);
+    backdrop-filter: blur(28px) saturate(155%);
+  }
+  .card-top { min-height: 72px; padding: 16px 18px; }
+  .customer-num { color: #8390aa; }
+  .customer-name { font-size: 16px; }
+  .card-body { padding: 16px 18px 20px; border-top-color: #ffffff18; }
+  .checkin-btn, .expand-btn, .icon-btn, .add-btn, .primary-btn, .secondary-btn, .save-open-btn {
+    border-color: #ffffff2b;
+    border-radius: 16px;
+    box-shadow: inset 0 1px #ffffff1d, 0 9px 25px #0003;
+  }
+  .checkin-btn, .expand-btn, .icon-btn, .secondary-btn, .save-open-btn { background: #ffffff12; }
+  .checkin-btn.active {
+    border-color: #70e99a88;
+    box-shadow: 0 8px 26px #36d47755, inset 0 1px #ffffff55;
+  }
+  .choice-group { border-color: #ffffff24; border-radius: 16px; background: #ffffff08; }
+  .choice-btn { min-height: 42px; background: transparent; }
+  .choice-btn[aria-pressed="true"] { box-shadow: inset 0 1px #ffffff66, 0 6px 18px #0003; }
+  .notes-field, .extra-notes, .quantity {
+    border-color: #ffffff24;
+    border-radius: 18px;
+    background: #050a16a8;
+    box-shadow: inset 0 1px #ffffff12;
+  }
+  .panel { padding: 18px; }
+  .add-customer-wrap { padding: 18px 0 8px; }
+  .add-btn, .primary-btn {
+    border-color: #ffffff4d;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #8ab8ff, #6d7df5);
+    box-shadow: 0 14px 30px #5b9bff55, inset 0 1px #ffffff8a;
+  }
+  .traffic-slider { border-radius: 999px; }
+  .app-bottom {
+    right: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    width: min(calc(100% - 24px), 620px);
+    transform: translateX(-50%);
+    padding: 8px;
+    border: 1px solid #ffffff2b;
+    border-radius: 26px;
+    background: #101a32d9;
+    box-shadow: 0 20px 45px #0007, inset 0 1px #ffffff1f;
+    backdrop-filter: blur(28px) saturate(170%);
+  }
+  .nav-inner { gap: 6px; }
+  .nav-btn { min-height: 56px; border-radius: 19px; }
+  .nav-btn[aria-current="page"] {
+    border-color: #ffffff2d;
+    background: #ffffff16;
+    box-shadow: inset 0 1px #ffffff24, 0 8px 20px #0003;
+  }
+  @media (max-width: 460px) {
+    header { top: 8px; margin-top: 8px; padding: 14px; border-radius: 24px; }
+    .app-title { font-size: 19px; }
+    .card-top { min-height: 64px; padding: 12px 12px; }
+    .card-body { padding: 14px 12px 16px; }
+    .panel { padding: 14px; }
+  }
+  header {
+    top: 8px;
+    margin-top: 8px;
+    padding: 13px 16px 12px;
+  }
+  .header-top { align-items: center; gap: 8px; }
+  .app-title { font-size: 20px; }
+  .header-badges {
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+  }
+  .date-badge, .weather-badge {
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+  .stats-row { gap: 5px; margin-top: 10px; }
+  .stat-chip {
+    min-height: 35px;
+    padding: 5px 3px;
+    border-radius: 14px;
+    font-size: 9px;
+  }
+  .stat-chip .num { font-size: 13px; }
+  .section-heading { margin-bottom: 12px; }
+  .section-title { font-size: 20px; }
+  @media (max-width: 460px) {
+    header { padding: 11px 12px 10px; }
+    .app-title { font-size: 18px; }
+    .header-badges { gap: 3px; }
+    .date-badge, .weather-badge { padding: 4px 5px; font-size: 8px; }
+  }
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    min-height: 30px;
+    padding: 5px;
+    border: 1px solid #ffffff24;
+    border-radius: 999px;
+    background: #ffffff0f;
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: inset 0 1px #ffffff16;
+  }
+  .theme-icon { display: block; width: 16px; height: 16px; }
+  .theme-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .customer-swipe-shell,
+  .saved-swipe-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    background: #52627d;
+  }
+  .customer-delete-btn,
+  .saved-delete-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 88px;
+    border: 0;
+    border-radius: 0;
+    background: #64748b;
+    color: #f8fafc;
+    cursor: pointer;
+    font: 700 12px var(--sans);
+  }
+  .customer-card,
+  .saved-record {
+    position: relative;
+    z-index: 1;
+    transition: transform .2s ease;
+  }
+  .customer-card.swiped,
+  .saved-record.swiped { transform: translateX(-88px); }
+  .stats-row { align-items: stretch; }
+  .stat-chip {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    line-height: 1;
+  }
+  .stat-chip .num { display: inline-block; margin: 0; line-height: 1; }
+  body[data-theme="light"] {
+    --bg: #edf3fb;
+    --surface: #ffffffb8;
+    --surface-raised: #ffffffd9;
+    --surface-inset: #e3eaf5;
+    --border: #b8c5d8;
+    --text: #172033;
+    --muted: #56647a;
+    --muted-2: #77849a;
+    background: radial-gradient(circle at 8% 0%, #9ec5ff 0, transparent 35%), radial-gradient(circle at 96% 20%, #dfc5ff 0, transparent 32%), #edf3fb;
+  }
+  body[data-theme="light"]::before, body[data-theme="light"]::after { opacity: .22; }
+  body[data-theme="light"] header,
+  body[data-theme="light"] .customer-card,
+  body[data-theme="light"] .panel,
+  body[data-theme="light"] .inventory-card,
+  body[data-theme="light"] .saved-record,
+  body[data-theme="light"] .app-bottom {
+    border-color: #ffffffb8;
+    background: #ffffff9c;
+    box-shadow: 0 18px 45px #7890ae33, inset 0 1px #ffffff;
+  }
+  body[data-theme="light"] .date-badge,
+  body[data-theme="light"] .weather-badge,
+  body[data-theme="light"] .stat-chip,
+  body[data-theme="light"] .theme-toggle,
+  body[data-theme="light"] .checkin-btn,
+  body[data-theme="light"] .expand-btn,
+  body[data-theme="light"] .icon-btn,
+  body[data-theme="light"] .secondary-btn,
+  body[data-theme="light"] .save-open-btn,
+  body[data-theme="light"] .nav-btn[aria-current="page"] {
+    border-color: #b8c5d8;
+    background: #ffffffb8;
+    color: var(--text);
+    box-shadow: 0 7px 18px #7890ae22, inset 0 1px #ffffff;
+  }
+  body[data-theme="light"] .notes-field,
+  body[data-theme="light"] .extra-notes,
+  body[data-theme="light"] .quantity,
+  body[data-theme="light"] .choice-group {
+    border-color: #b8c5d8;
+    background: #e9eff8cc;
+    color: var(--text);
+  }
+  body[data-theme="light"] .saved-swipe-shell { background: #d5deeb; }
+  body[data-theme="light"] .saved-delete-btn { background: #94a3b8; color: #172033; }
+  body[data-theme="light"] .customer-swipe-shell { background: #d5deeb; }
+  body[data-theme="light"] .customer-delete-btn { background: #94a3b8; color: #172033; }
+  body[data-theme="light"] .customer-card,
+  body[data-theme="light"] .saved-record {
+    border-radius: 24px;
+    background: #ffffffed;
+    box-shadow: 0 14px 32px #7890ae22, inset 0 1px #ffffff;
+  }
+  body[data-theme="light"] .stat-chip {
+    border-color: #c1ccdc;
+    background: #ffffffd9;
+    color: #53627a;
+    box-shadow: 0 8px 18px #7890ae1c, inset 0 1px #ffffff;
+  }
+  body[data-theme="light"] .section-title,
+  body[data-theme="light"] .field-label,
+  body[data-theme="light"] .control-label,
+  body[data-theme="light"] .inventory-name,
+  body[data-theme="light"] .saved-record h3 { color: #172033; }
+  body[data-theme="light"] .saved-meta,
+  body[data-theme="light"] .saved-preview,
+  body[data-theme="light"] .inventory-help { color: #607089; }
+  body[data-theme="light"] .theme-toggle {
+    border-color: #b8c5d8;
+    background: #ffffffb8;
+    color: #172033;
+  }
+  body[data-theme="light"] .app-title { color: #172033; }
+
+</style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <div class="app-title">Customer <span>Report</span></div>
+    <div class="header-badges">
+      <div class="date-badge" id="dateBadge"></div>
+      <div class="weather-badge" id="weatherBadge" aria-live="polite">Weather loading</div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">
+        <span class="theme-icon" aria-hidden="true"></span>
+        <span class="sr-only">Toggle theme</span>
+      </button>
+    </div>
+  </div>
+  <div class="stats-row" aria-label="Current report summary">
+    <div class="stat-chip green"><span class="num" id="statIn">0</span> Checked In</div>
+    <div class="stat-chip amber"><span class="num" id="statRedir">0</span> Redirected</div>
+    <div class="stat-chip purple"><span class="num" id="statInt">0</span> Interaction</div>
+    <div class="stat-chip"><span class="num" id="statSold">0</span> Sold</div>
+  </div>
+</header>
+
+<main>
+  <section class="view active" id="view-current" aria-labelledby="current-title">
+    <div class="section-heading">
+      <div>
+        <h1 class="section-title" id="current-title">Current Report</h1>
+      </div>
+    </div>
+    <div class="customer-list" id="customerList"></div>
+    <div class="add-customer-wrap">
+      <button class="add-btn" id="addCustomerBtn" type="button"><span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span> Add customer</button>
+    </div>
+
+    <div class="panel">
+      <label class="field-label" for="trafficTrack">How was the traffic?</label>
+      <div class="traffic-track" id="trafficTrack" role="group" aria-label="Traffic level"></div>
+    </div>
+    <div class="panel">
+      <label class="field-label" for="extraNotes">Extra notes</label>
+      <textarea class="extra-notes" id="extraNotes" placeholder="Add extra notes to include in the report..."></textarea>
+    </div>
+    <div class="panel">
+      <div class="report-actions">
+        <button class="primary-btn" id="saveBtn" type="button"><span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg></span> Save notes</button>
+        <button class="secondary-btn" id="copyBtn" type="button"><span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="1.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h3"/></svg></span> Copy report</button>
+      </div>
+      <button class="secondary-btn reset-inventory" id="resetReportBtn" type="button"><span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span> Reset current report</button>
+      <div class="status-message" id="statusMessage" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-inventory" aria-labelledby="inventory-title">
+    <div class="section-heading">
+      <div>
+        <h1 class="section-title" id="inventory-title">Inventory</h1>
+        <p class="section-subtitle">Test-stick quantities are saved separately from customer notes.</p>
+      </div>
+    </div>
+    <div class="inventory-grid" id="inventoryGrid"></div>
+    <button class="secondary-btn reset-inventory" id="resetInventoryBtn" type="button"><span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span> Reset all inventory</button>
+  </section>
+
+  <section class="view" id="view-saved" aria-labelledby="saved-title">
+    <div class="section-heading">
+      <div>
+        <h1 class="section-title" id="saved-title">Saved Data</h1>
+        <p class="section-subtitle">Saved snapshots are listed newest first.</p>
+      </div>
+    </div>
+    <div class="saved-list" id="savedList"></div>
+  </section>
+</main>
+
+<nav class="app-bottom" aria-label="Primary navigation">
+  <div class="nav-inner">
+    <button class="nav-btn" type="button" data-view="current" aria-current="page">
+      <span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+      Current Report
+    </button>
+    <button class="nav-btn" type="button" data-view="inventory">
+      <span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 7V4h8v3M8 12h8M8 16h5"/></svg></span>
+      Inventory
+    </button>
+    <button class="nav-btn" type="button" data-view="saved">
+      <span class="svg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9 4v5h6V4M9 14h6M9 17h4"/></svg></span>
+      Saved Data
+    </button>
+  </div>
+</nav>
+
+<div class="modal-backdrop hidden" id="savedModal" role="presentation">
+  <article class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <h2 id="modalTitle">Saved report</h2>
+      <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Close saved report">Close</button>
+    </div>
+    <div class="modal-content" id="modalContent"></div>
+  </article>
+</div>
+
+<script>
+const CURRENT_KEY = 'customer_report_current_v3';
+const LEGACY_CURRENT_KEY = 'nicotine_report_v2';
+const SAVED_KEY = 'customer_report_saved_v1';
+const INVENTORY_KEY = 'customer_report_inventory_v1';
+const THEME_KEY = 'customer_report_theme_v1';
+const TRAFFIC_LABELS = ['None', 'Very Low', 'Low', 'Regular', 'High', 'Very High'];
+const TRAFFIC_COLORS = ['#7c879b', '#53c6e8', '#36d477', '#f4b64f', '#ef974c', '#f16b72'];
+const WMO = {
+  0: 'Sunny', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+  45: 'Foggy', 48: 'Icy Fog', 51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle',
+  61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain', 71: 'Light Snow', 73: 'Snow',
+  75: 'Heavy Snow', 77: 'Snow Grains', 80: 'Showers', 81: 'Showers', 82: 'Heavy Showers',
+  85: 'Snow Showers', 86: 'Heavy Snow Showers', 95: 'Thunderstorm', 96: 'Thunderstorm + Hail', 99: 'Heavy Thunderstorm'
+};
+const WMO_ICONS = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌦️', 63: '🌧️', 65: '🌧️',
+  71: '🌨️', 73: '❄️', 75: '❄️', 77: '🌨️', 80: '🌦️', 81: '🌧️',
+  82: '🌧️', 85: '🌨️', 86: '❄️', 95: '⛈️', 96: '⛈️', 99: '⛈️'
+};
+
+let current = loadCurrent();
+let savedRecords = loadSavedRecords();
+let inventory = loadInventory();
+let weatherShort = '';
+
+function makeId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createCustomer(customerNumber) {
+  return {
+    id: makeId(),
+    customerNumber,
+    name: `Customer ${customerNumber}`,
+    checkedIn: false,
+    checkInTime: null,
+    redirected: null,
+    interested: null,
+    is18OrOlder: null,
+    soldProduct: null,
+    notes: '',
+    expanded: false
+  };
+}
+
+function defaultCustomers() {
+  return [1, 2, 3].map(createCustomer);
+}
+
+function cleanText(value, fallback = '') {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function cleanChoice(value, allowed) {
+  return allowed.includes(value) ? value : null;
+}
+
+function normalizeCustomer(raw, fallbackNumber) {
+  const customerNumber = Number.isInteger(raw?.customerNumber) && raw.customerNumber > 0
+    ? raw.customerNumber
+    : fallbackNumber;
+  const checkedIn = raw?.checkedIn === true;
+  const legacyTime = cleanText(raw?.timeIn);
+  return {
+    id: cleanText(raw?.id) || makeId(),
+    customerNumber,
+    name: cleanText(raw?.name, `Customer ${customerNumber}`) || `Customer ${customerNumber}`,
+    checkedIn,
+    checkInTime: cleanText(raw?.checkInTime, legacyTime || '') || null,
+    redirected: cleanChoice(raw?.redirected, ['Yes', 'No']),
+    interested: cleanChoice(raw?.interested, ['Yes', 'No']),
+    is18OrOlder: cleanChoice(raw?.is18OrOlder, ['Yes', 'No']),
+    soldProduct: cleanChoice(raw?.soldProduct, ['IQOS', 'VEEV', 'NONE']),
+    notes: cleanText(raw?.notes),
+    expanded: raw?.expanded === true
+  };
+}
+
+function hasCustomerWork(customer) {
+  return Boolean(
+    customer?.name && !/^Customer \d+$/i.test(customer.name) ||
+    customer?.checkedIn || customer?.timeIn || customer?.checkInTime ||
+    customer?.redirected || customer?.interested || customer?.is18OrOlder ||
+    customer?.soldProduct || customer?.notes
+  );
+}
+
+function normalizeCustomers(rawCustomers) {
+  if (!Array.isArray(rawCustomers)) return defaultCustomers();
+  let normalized = rawCustomers.map((item, index) => normalizeCustomer(item, index + 1));
+  const legacyWasOnlyBlankPlaceholders = normalized.length > 3 && normalized.every(c =>
+    !hasCustomerWork(c) && /^Customer \d+$/i.test(c.name)
+  );
+  if (legacyWasOnlyBlankPlaceholders) normalized = normalized.slice(0, 3);
+  while (normalized.length < 3) normalized.push(createCustomer(normalized.length + 1));
+  return normalized;
+}
+
+function normalizeCurrent(raw) {
+  if (Array.isArray(raw)) {
+    return { customers: normalizeCustomers(raw), trafficIndex: -1, extraNotes: '' };
+  }
+  return {
+    customers: normalizeCustomers(raw?.customers),
+    trafficIndex: Number.isInteger(raw?.trafficIndex) && raw.trafficIndex >= 0 && raw.trafficIndex < TRAFFIC_LABELS.length
+      ? raw.trafficIndex : -1,
+    extraNotes: cleanText(raw?.extraNotes)
+  };
+}
+
+function readJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeJson(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) {}
+}
+
+function loadCurrent() {
+  const currentRaw = readJson(CURRENT_KEY, null);
+  if (currentRaw) return normalizeCurrent(currentRaw);
+  return normalizeCurrent(readJson(LEGACY_CURRENT_KEY, null));
+}
+
+function loadSavedRecords() {
+  const raw = readJson(SAVED_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.map(record => ({
+    id: cleanText(record?.id) || makeId(),
+    savedAt: cleanText(record?.savedAt) || new Date(0).toISOString(),
+    customers: normalizeCustomers(record?.customers),
+    trafficIndex: Number.isInteger(record?.trafficIndex) ? record.trafficIndex : -1,
+    extraNotes: cleanText(record?.extraNotes)
+  })).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+}
+
+function safeQuantity(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
+}
+
+function loadInventory() {
+  const raw = readJson(INVENTORY_KEY, {});
+  return {
+    birch: safeQuantity(raw?.birch),
+    oak: safeQuantity(raw?.oak),
+    elm: safeQuantity(raw?.elm),
+    sequoia: safeQuantity(raw?.sequoia)
+  };
+}
+
+function saveCurrent() {
+  writeJson(CURRENT_KEY, current);
+}
+
+function saveInventory() {
+  writeJson(INVENTORY_KEY, inventory);
+}
+
+function saveRecords() {
+  writeJson(SAVED_KEY, savedRecords);
+}
+
+function applyTheme(theme) {
+  const light = theme === 'light';
+  document.body.dataset.theme = light ? 'light' : 'dark';
+  const toggle = document.getElementById('themeToggle');
+  toggle.querySelector('.theme-icon').innerHTML = light
+    ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5a8.5 8.5 0 1 0 12 12Z"></path></svg>';
+  toggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+  toggle.title = light ? 'Switch to dark theme' : 'Switch to light theme';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', light ? '#edf3fb' : '#080d1c');
+}
+
+function formatDate(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateTime(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return cleanText(dateValue, 'Unknown time');
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function formatCheckInTime(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return value;
+}
+
+function formatReportTime(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+}
+
+function setStatus(message) {
+  const status = document.getElementById('statusMessage');
+  status.textContent = message;
+  window.clearTimeout(setStatus.timer);
+  if (message) setStatus.timer = window.setTimeout(() => { status.textContent = ''; }, 3000);
+}
+
+function render() {
+  document.getElementById('dateBadge').textContent = formatDate(new Date());
+  const list = document.getElementById('customerList');
+  list.replaceChildren(...current.customers.map((customer, index) => buildCard(customer, index)));
+  document.getElementById('extraNotes').value = current.extraNotes;
+  updateStats();
+  renderTraffic();
+}
+
+function buildCard(customer, index) {
+  const shell = document.createElement('div');
+  shell.className = 'customer-swipe-shell';
+  const card = document.createElement('article');
+  card.className = `customer-card${customer.checkedIn ? ' checked-in' : ''}`;
+  card.id = `card-${customer.id}`;
+
+  const top = document.createElement('div');
+  top.className = 'card-top';
+  const number = document.createElement('div');
+  number.className = 'customer-num';
+  number.textContent = String(customer.customerNumber).padStart(2, '0');
+
+  const nameInput = document.createElement('input');
+  nameInput.className = 'customer-name';
+  nameInput.type = 'text';
+  nameInput.value = customer.name;
+  nameInput.placeholder = `Customer ${customer.customerNumber}`;
+  nameInput.setAttribute('aria-label', `Customer ${customer.customerNumber} name`);
+  nameInput.addEventListener('change', event => {
+    customer.name = event.target.value.trim() || `Customer ${customer.customerNumber}`;
+    saveCurrent();
+  });
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+  if (customer.checkedIn && customer.checkInTime) {
+    const time = document.createElement('span');
+    time.className = 'time-tag';
+    time.textContent = formatCheckInTime(customer.checkInTime);
+    time.title = `Checked in ${formatDateTime(customer.checkInTime)}`;
+    actions.appendChild(time);
+  }
+
+  const checkIn = document.createElement('button');
+  checkIn.type = 'button';
+  checkIn.className = `checkin-btn${customer.checkedIn ? ' active' : ''}`;
+  checkIn.textContent = customer.checkedIn ? 'In' : 'Check In';
+  checkIn.setAttribute('aria-pressed', String(customer.checkedIn));
+  checkIn.setAttribute('aria-label', `${customer.checkedIn ? 'Undo' : 'Check in'} ${customer.name}`);
+  checkIn.addEventListener('click', () => toggleCheckIn(index));
+
+  const expand = document.createElement('button');
+  expand.type = 'button';
+  expand.className = 'expand-btn';
+  expand.textContent = customer.expanded ? '-' : '+';
+  expand.setAttribute('aria-expanded', String(customer.expanded));
+  expand.setAttribute('aria-controls', `body-${customer.id}`);
+  expand.setAttribute('aria-label', `${customer.expanded ? 'Collapse' : 'Expand'} ${customer.name}`);
+  expand.addEventListener('click', () => toggleExpand(index));
+
+  actions.append(checkIn, expand);
+  top.append(number, nameInput, actions);
+
+  const body = document.createElement('div');
+  body.className = `card-body${customer.expanded ? ' open' : ''}`;
+  body.id = `body-${customer.id}`;
+
+  const firstRow = document.createElement('div');
+  firstRow.className = 'control-row';
+  firstRow.append(
+    buildChoiceGroup(customer, index, 'redirected', 'Redirected?', ['Yes', 'No']),
+    buildChoiceGroup(customer, index, 'is18OrOlder', '18 or older?', ['Yes', 'No']),
+    buildChoiceGroup(customer, index, 'interested', 'Interaction?', ['Yes', 'No'])
+  );
+
+  const productGroup = buildChoiceGroup(customer, index, 'soldProduct', 'Product sold?', ['IQOS', 'VEEV', 'None']);
+  productGroup.querySelectorAll('.choice-btn').forEach(button => button.classList.add('product'));
+
+  const notesLabel = document.createElement('label');
+  notesLabel.className = 'field-label';
+  notesLabel.htmlFor = `notes-${customer.id}`;
+  notesLabel.textContent = 'Notes';
+  const notes = document.createElement('textarea');
+  notes.className = 'notes-field';
+  notes.id = `notes-${customer.id}`;
+  notes.placeholder = 'Add notes here...';
+  notes.value = customer.notes;
+  notes.addEventListener('input', event => {
+    customer.notes = event.target.value;
+    saveCurrent();
+  });
+
+  body.append(firstRow, productGroup, notesLabel, notes);
+  card.append(top, body);
+  const deleteButton = document.createElement('button');
+  deleteButton.type = 'button';
+  deleteButton.className = 'customer-delete-btn';
+  deleteButton.textContent = 'Delete';
+  deleteButton.setAttribute('aria-label', `Delete ${customer.name}`);
+  deleteButton.addEventListener('click', () => deleteCurrentCustomer(customer.id));
+  shell.append(deleteButton, card);
+
+  let startX = 0;
+  let offsetX = 0;
+  card.addEventListener('touchstart', event => {
+    startX = event.touches[0].clientX;
+    offsetX = card.classList.contains('swiped') ? -88 : 0;
+    card.style.transition = 'none';
+  }, { passive: true });
+  card.addEventListener('touchmove', event => {
+    const delta = event.touches[0].clientX - startX;
+    const next = Math.max(-88, Math.min(0, offsetX + delta));
+    card.style.transform = `translateX(${next}px)`;
+  }, { passive: true });
+  card.addEventListener('touchend', () => {
+    card.style.transition = '';
+    const match = card.style.transform.match(/-?\d+/);
+    const revealed = Number(match?.[0] || 0) < -44;
+    card.style.transform = '';
+    card.classList.toggle('swiped', revealed);
+  });
+  return shell;
+}
+
+function buildChoiceGroup(customer, index, field, label, options) {
+  const group = document.createElement('div');
+  group.className = 'control-group';
+  const labelElement = document.createElement('span');
+  labelElement.className = 'control-label';
+  labelElement.textContent = label;
+  const choices = document.createElement('div');
+  choices.className = 'choice-group';
+  options.forEach(option => {
+    const value = option === 'None' ? 'NONE' : option;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'choice-btn';
+    if (value === 'Yes') button.classList.add('positive');
+    if (value === 'No') button.classList.add('negative');
+    button.textContent = option;
+    button.setAttribute('aria-pressed', String(customer[field] === value));
+    button.addEventListener('click', () => {
+      customer[field] = customer[field] === value ? null : value;
+      saveCurrent();
+      rerenderCard(index);
+      updateStats();
+    });
+    choices.appendChild(button);
+  });
+  group.append(labelElement, choices);
+  return group;
+}
+
+function rerenderCard(index) {
+  const old = document.getElementById(`card-${current.customers[index].id}`);
+  if (old) old.replaceWith(buildCard(current.customers[index], index));
+}
+
+function toggleCheckIn(index) {
+  const customer = current.customers[index];
+  if (customer.checkedIn) {
+    customer.checkedIn = false;
+    customer.checkInTime = null;
+  } else {
+    customer.checkedIn = true;
+    customer.checkInTime = new Date().toISOString();
+    customer.expanded = true;
+  }
+  saveCurrent();
+  render();
+}
+
+function toggleExpand(index) {
+  current.customers[index].expanded = !current.customers[index].expanded;
+  saveCurrent();
+  rerenderCard(index);
+}
+
+function updateStats() {
+  document.getElementById('statIn').textContent = current.customers.filter(c => c.checkedIn).length;
+  document.getElementById('statRedir').textContent = current.customers.filter(c => c.redirected === 'Yes').length;
+  document.getElementById('statInt').textContent = current.customers.filter(c => c.interested === 'Yes').length;
+  document.getElementById('statSold').textContent = current.customers.filter(c => c.soldProduct === 'IQOS' || c.soldProduct === 'VEEV').length;
+}
+
+function renderTraffic() {
+  const track = document.getElementById('trafficTrack');
+  const selected = current.trafficIndex < 0 ? 0 : current.trafficIndex;
+  track.innerHTML = `<div class="traffic-slider-wrap">
+    <input class="traffic-slider" id="trafficSlider" type="range" min="0" max="5" step="1" value="${selected}" aria-label="Traffic level">
+    <div class="traffic-ticks">${TRAFFIC_LABELS.map((label, index) => `<span class="traffic-tick${selected === index ? ' active' : ''}">${label}</span>`).join('')}</div>
+  </div>`;
+  const slider = document.getElementById('trafficSlider');
+  const updateSliderVisual = (index) => {
+    slider.style.setProperty('--slider-color', TRAFFIC_COLORS[index]);
+    slider.style.setProperty('--slider-percent', `${(index / (TRAFFIC_LABELS.length - 1)) * 100}%`);
+    slider.setAttribute('aria-valuetext', TRAFFIC_LABELS[index]);
+    track.querySelectorAll('.traffic-tick').forEach((tick, tickIndex) => {
+      tick.classList.toggle('active', tickIndex === index);
+    });
+  };
+  updateSliderVisual(selected);
+  slider.addEventListener('input', () => {
+    const index = Number(slider.value);
+    current.trafficIndex = index;
+    saveCurrent();
+    updateSliderVisual(index);
+  });
+}
+
+function copyReport() {
+  const lines = [];
+  if (weatherShort) lines.push(weatherShort);
+  if (current.trafficIndex >= 0) lines.push(`Traffic: ${TRAFFIC_LABELS[current.trafficIndex]}`);
+  const checked = current.customers.filter(customer => customer.checkedIn);
+  if (checked.length === 0) {
+    lines.push('No customers checked in yet.');
+  } else {
+    checked.forEach(customer => {
+      const redir = customer.redirected || '-';
+      const displayName = customer.name.replace(/^Customer\s+(\d+)$/i, 'CX$1');
+      let line = `${displayName} |${formatReportTime(customer.checkInTime) || '-'}| Redirected: ${redir}`;
+      if (customer.interested) line += ` | Interaction: ${customer.interested}`;
+      if (customer.is18OrOlder === 'Yes') line += ' | 18+';
+      if (customer.is18OrOlder === 'No') line += ' | 18-';
+      if (customer.soldProduct === 'IQOS' || customer.soldProduct === 'VEEV') {
+        line += ` | Sold: ${customer.soldProduct}`;
+      }
+      if (customer.notes.trim()) line += ` | ${customer.notes.trim()}`;
+      lines.push(line);
+    });
+  }
+  if (current.extraNotes.trim()) lines.push(current.extraNotes.trim());
+  const text = lines.join('\n');
+  const copied = navigator.clipboard?.writeText
+    ? Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise((_, reject) => window.setTimeout(() => reject(new Error('Clipboard timed out')), 800))
+      ])
+    : Promise.reject(new Error('Clipboard API unavailable'));
+  copied.then(() => setStatus('Copied to clipboard!')).catch(() => {
+    const fallback = document.createElement('textarea');
+    fallback.value = text;
+    fallback.style.position = 'fixed';
+    fallback.style.opacity = '0';
+    document.body.appendChild(fallback);
+    fallback.select();
+    try {
+      document.execCommand('copy');
+      setStatus('Copied to clipboard!');
+    } catch (error) {
+      setStatus('Copy unavailable - select the report text manually.');
+    } finally {
+      fallback.remove();
+    }
+  });
+}
+
+function saveSnapshot() {
+  const snapshot = JSON.parse(JSON.stringify(current));
+  const record = {
+    id: makeId(),
+    savedAt: new Date().toISOString(),
+    customers: snapshot.customers,
+    trafficIndex: snapshot.trafficIndex,
+    extraNotes: snapshot.extraNotes
+  };
+  savedRecords = [record, ...savedRecords];
+  saveRecords();
+  renderSaved();
+  setStatus('Notes saved');
+}
+
+function renderSaved() {
+  const list = document.getElementById('savedList');
+  if (!savedRecords.length) {
+    list.innerHTML = '<div class="panel empty-state">No saved notes yet. Save the current report to create a record.</div>';
+    return;
+  }
+  list.replaceChildren(...savedRecords.map(record => {
+    const shell = document.createElement('div');
+    shell.className = 'saved-swipe-shell';
+    const article = document.createElement('article');
+    article.className = 'saved-record';
+    const top = document.createElement('div');
+    top.className = 'saved-record-top';
+    const heading = document.createElement('div');
+    const title = document.createElement('h3');
+    title.textContent = formatDate(record.savedAt);
+    const meta = document.createElement('div');
+    meta.className = 'saved-meta';
+    meta.textContent = `${formatDateTime(record.savedAt)} - ${record.customers.length} customer entries`;
+    heading.append(title, meta);
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'save-open-btn';
+    open.textContent = 'Open';
+    open.addEventListener('click', () => showSavedRecord(record));
+    top.append(heading, open);
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'saved-delete-btn';
+    deleteButton.textContent = 'Delete';
+    deleteButton.setAttribute('aria-label', `Delete saved report from ${formatDateTime(record.savedAt)}`);
+    deleteButton.addEventListener('click', () => deleteSavedRecord(record.id));
+    const preview = document.createElement('p');
+    preview.className = 'saved-preview';
+    const note = record.customers.find(customer => customer.notes.trim())?.notes.trim();
+    preview.textContent = note || record.extraNotes.trim() || 'No notes in this saved snapshot.';
+    article.append(top, preview);
+    shell.append(deleteButton, article);
+    let startX = 0;
+    let offsetX = 0;
+    article.addEventListener('touchstart', event => {
+      startX = event.touches[0].clientX;
+      offsetX = article.classList.contains('swiped') ? -88 : 0;
+      article.style.transition = 'none';
+    }, { passive: true });
+    article.addEventListener('touchmove', event => {
+      const delta = event.touches[0].clientX - startX;
+      const next = Math.max(-88, Math.min(0, offsetX + delta));
+      article.style.transform = `translateX(${next}px)`;
+    }, { passive: true });
+    article.addEventListener('touchend', () => {
+      article.style.transition = '';
+      const match = article.style.transform.match(/-?\d+/);
+      const revealed = Number(match?.[0] || 0) < -44;
+      article.style.transform = '';
+      article.classList.toggle('swiped', revealed);
+    });
+    return shell;
+  }));
+}
+
+function deleteSavedRecord(recordId) {
+  savedRecords = savedRecords.filter(record => record.id !== recordId);
+  saveRecords();
+  renderSaved();
+  setStatus('Saved report deleted');
+}
+
+function deleteCurrentCustomer(customerId) {
+  if (current.customers.length <= 1) {
+    setStatus('Keep at least one customer');
+    return;
+  }
+  current.customers = current.customers.filter(customer => customer.id !== customerId);
+  saveCurrent();
+  render();
+  setStatus('Customer deleted');
+}
+
+function showSavedRecord(record) {
+  document.getElementById('modalTitle').textContent = `Saved report - ${formatDate(record.savedAt)}`;
+  const content = document.getElementById('modalContent');
+  content.replaceChildren();
+  const summary = document.createElement('p');
+  summary.className = 'detail-line';
+  summary.textContent = `Saved ${formatDateTime(record.savedAt)}${record.trafficIndex >= 0 ? ` - Traffic: ${TRAFFIC_LABELS[record.trafficIndex]}` : ''}`;
+  content.appendChild(summary);
+  if (record.extraNotes) {
+    const extra = document.createElement('p');
+    extra.className = 'detail-line';
+    extra.textContent = `Extra notes: ${record.extraNotes}`;
+    content.appendChild(extra);
+  }
+  record.customers.forEach(customer => {
+    const detail = document.createElement('section');
+    detail.className = 'detail-customer';
+    const title = document.createElement('h3');
+    title.textContent = `${customer.name} - ${customer.checkedIn ? `Checked in ${formatCheckInTime(customer.checkInTime)}` : 'Not checked in'}`;
+    const details = document.createElement('p');
+    details.className = 'detail-line';
+    details.textContent = `Redirected: ${customer.redirected || '-'} - Interaction: ${customer.interested || '-'} - 18 or older: ${customer.is18OrOlder || '-'} - Product sold: ${customer.soldProduct === 'NONE' ? 'None' : (customer.soldProduct || '-')}`;
+    const notes = document.createElement('p');
+    notes.className = 'detail-line';
+    notes.textContent = customer.notes ? `Notes: ${customer.notes}` : 'Notes: -';
+    detail.append(title, details, notes);
+    content.appendChild(detail);
+  });
+  document.getElementById('savedModal').classList.remove('hidden');
+  document.getElementById('closeModalBtn').focus();
+}
+
+function closeSavedRecord() {
+  document.getElementById('savedModal').classList.add('hidden');
+}
+
+function renderInventory() {
+  const grid = document.getElementById('inventoryGrid');
+  grid.replaceChildren(...Object.keys(inventory).map(key => {
+    const card = document.createElement('article');
+    card.className = 'inventory-card';
+    const title = document.createElement('h2');
+    title.className = 'inventory-name';
+    title.textContent = key[0].toUpperCase() + key.slice(1);
+    const help = document.createElement('p');
+    help.className = 'inventory-help';
+    help.textContent = 'Test sticks';
+    const controls = document.createElement('div');
+    controls.className = 'inventory-controls';
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.className = 'icon-btn';
+    minus.textContent = '-';
+    minus.setAttribute('aria-label', `Decrease ${key} inventory`);
+    minus.disabled = inventory[key] === 0;
+    minus.addEventListener('click', () => changeInventory(key, -1));
+    const quantity = document.createElement('input');
+    quantity.className = 'quantity';
+    quantity.type = 'number';
+    quantity.inputMode = 'numeric';
+    quantity.min = '0';
+    quantity.step = '1';
+    quantity.value = inventory[key];
+    quantity.setAttribute('aria-label', `${inventory[key]} ${key} test sticks`);
+    const commitQuantity = () => {
+      inventory[key] = safeQuantity(quantity.value);
+      saveInventory();
+      renderInventory();
+    };
+    quantity.addEventListener('change', commitQuantity);
+    quantity.addEventListener('blur', commitQuantity);
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'icon-btn';
+    plus.textContent = '+';
+    plus.setAttribute('aria-label', `Increase ${key} inventory`);
+    plus.addEventListener('click', () => changeInventory(key, 1));
+    controls.append(minus, quantity, plus);
+    card.append(title, help, controls);
+    return card;
+  }));
+}
+
+function changeInventory(key, amount) {
+  inventory[key] = safeQuantity(inventory[key] + amount);
+  saveInventory();
+  renderInventory();
+}
+
+function resetCurrentReport() {
+  if (!window.confirm('Reset the current report? Unsaved notes and customer details will be cleared.')) return;
+  current = { customers: defaultCustomers(), trafficIndex: -1, extraNotes: '' };
+  saveCurrent();
+  render();
+  setStatus('Current report reset');
+}
+
+function resetInventory() {
+  if (!window.confirm('Reset all inventory to zero?')) return;
+  inventory = { birch: 0, oak: 0, elm: 0, sequoia: 0 };
+  saveInventory();
+  renderInventory();
+  setStatus('Inventory reset');
+}
+
+function switchView(viewName) {
+  document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === `view-${viewName}`));
+  document.querySelectorAll('.nav-btn').forEach(button => {
+    if (button.dataset.view === viewName) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  if (viewName === 'saved') renderSaved();
+  if (viewName === 'inventory') renderInventory();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function fetchWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=45.5017&longitude=-73.5673&current=temperature_2m,weather_code&temperature_unit=celsius&timezone=America%2FToronto';
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Weather request failed');
+    const data = await response.json();
+    const temp = Math.round(data.current.temperature_2m);
+    const code = data.current.weather_code;
+    weatherShort = `${temp}°C ${WMO_ICONS[code] || ''} ${WMO[code] || 'Unknown'}`.replace(/\s+/g, ' ').trim();
+    document.getElementById('weatherBadge').textContent = weatherShort;
+  } catch (error) {
+    weatherShort = '';
+    document.getElementById('weatherBadge').textContent = 'Weather unavailable';
+  }
+}
+
+document.getElementById('addCustomerBtn').addEventListener('click', () => {
+  const highestNumber = current.customers.reduce((max, customer) => Math.max(max, customer.customerNumber), 0);
+  current.customers.push(createCustomer(highestNumber + 1));
+  saveCurrent();
+  render();
+  document.getElementById(`card-${current.customers.at(-1).id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+document.getElementById('extraNotes').addEventListener('input', event => {
+  current.extraNotes = event.target.value;
+  saveCurrent();
+});
+document.getElementById('saveBtn').addEventListener('click', saveSnapshot);
+document.getElementById('copyBtn').addEventListener('click', copyReport);
+document.getElementById('resetReportBtn').addEventListener('click', resetCurrentReport);
+document.getElementById('resetInventoryBtn').addEventListener('click', resetInventory);
+applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark');
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const nextTheme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, nextTheme);
+  applyTheme(nextTheme);
+});
+document.querySelectorAll('.nav-btn').forEach(button => button.addEventListener('click', () => switchView(button.dataset.view)));
+document.getElementById('closeModalBtn').addEventListener('click', closeSavedRecord);
+document.getElementById('savedModal').addEventListener('click', event => {
+  if (event.target.id === 'savedModal') closeSavedRecord();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeSavedRecord();
+});
+
+render();
+renderInventory();
+renderSaved();
+fetchWeather();
+window.setInterval(fetchWeather, 10 * 60 * 1000);
+</script>
+</body>
+</html>
