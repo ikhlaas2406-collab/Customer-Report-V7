@@ -1611,17 +1611,25 @@ function buildCard(customer, index) {
 
   let startX = 0;
   let offsetX = 0;
+  let swipeBlocked = false;
   card.addEventListener('touchstart', event => {
+    swipeBlocked = customer.expanded;
+    if (swipeBlocked) return;
     startX = event.touches[0].clientX;
     offsetX = card.classList.contains('swiped') ? -88 : 0;
     card.style.transition = 'none';
   }, { passive: true });
   card.addEventListener('touchmove', event => {
+    if (swipeBlocked) return;
     const delta = event.touches[0].clientX - startX;
     const next = Math.max(-88, Math.min(0, offsetX + delta));
     card.style.transform = `translateX(${next}px)`;
   }, { passive: true });
   card.addEventListener('touchend', () => {
+    if (swipeBlocked) {
+      swipeBlocked = false;
+      return;
+    }
     card.style.transition = '';
     const match = card.style.transform.match(/-?\d+/);
     const revealed = Number(match?.[0] || 0) < -44;
