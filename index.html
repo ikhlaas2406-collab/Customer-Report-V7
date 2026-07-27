@@ -851,6 +851,20 @@
     color: #172033;
     box-shadow: 0 10px 22px #7890ae3d, inset 0 1px #ffffffaa;
   }
+  html[data-theme="dark"] { background: #080d1c; }
+  html[data-theme="light"] { background: #edf3fb; }
+  .modal-header { min-width: 0; }
+  .modal-header h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .modal-header .icon-btn {
+    width: auto;
+    min-width: 78px;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
 
 </style>
 </head>
@@ -1127,6 +1141,7 @@ function saveRecords() {
 
 function applyTheme(theme) {
   const light = theme === 'light';
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
   document.body.dataset.theme = light ? 'light' : 'dark';
   const toggle = document.getElementById('themeToggle');
   toggle.querySelector('.theme-icon').innerHTML = light
