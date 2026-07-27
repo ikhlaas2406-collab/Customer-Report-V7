@@ -847,12 +847,28 @@
   .saved-delete-btn:active { filter: brightness(1.12); transform: scale(.97); }
   body[data-theme="light"] .customer-delete-btn,
   body[data-theme="light"] .saved-delete-btn {
-    background: linear-gradient(145deg, #b5c2d3, #8e9db2);
-    color: #172033;
-    box-shadow: 0 10px 22px #7890ae3d, inset 0 1px #ffffffaa;
+    background: linear-gradient(145deg, #ef6570, #c53d4b);
+    color: #fff8f8;
+    box-shadow: 0 10px 22px #a825355c, inset 0 1px #ffffff44;
   }
-  html[data-theme="dark"] { background: #080d1c; }
-  html[data-theme="light"] { background: #edf3fb; }
+  html[data-theme="dark"] {
+    background:
+      radial-gradient(circle at 6% -5%, #5b9bff62 0, transparent 30%),
+      radial-gradient(circle at 98% 18%, #a56bff4f 0, transparent 28%),
+      #080d1c;
+  }
+  html[data-theme="light"] {
+    background:
+      radial-gradient(circle at 8% 0%, #9ec5ff 0, transparent 35%),
+      radial-gradient(circle at 96% 20%, #dfc5ff 0, transparent 32%),
+      #edf3fb;
+  }
+  .customer-delete-btn,
+  .saved-delete-btn {
+    background: linear-gradient(145deg, #ef6570, #c53d4b);
+    color: #fff8f8;
+    box-shadow: 0 10px 22px #a825355c, inset 0 1px #ffffff44;
+  }
   .modal-header { min-width: 0; }
   .modal-header h2 {
     min-width: 0;
@@ -1017,7 +1033,7 @@ function createCustomer(customerNumber) {
 }
 
 function defaultCustomers() {
-  return [1, 2, 3].map(createCustomer);
+  return [1].map(createCustomer);
 }
 
 function cleanText(value, fallback = '') {
@@ -1061,11 +1077,11 @@ function hasCustomerWork(customer) {
 function normalizeCustomers(rawCustomers) {
   if (!Array.isArray(rawCustomers)) return defaultCustomers();
   let normalized = rawCustomers.map((item, index) => normalizeCustomer(item, index + 1));
-  const legacyWasOnlyBlankPlaceholders = normalized.length > 3 && normalized.every(c =>
+  const onlyBlankPlaceholders = normalized.length > 1 && normalized.every(c =>
     !hasCustomerWork(c) && /^Customer \d+$/i.test(c.name)
   );
-  if (legacyWasOnlyBlankPlaceholders) normalized = normalized.slice(0, 3);
-  while (normalized.length < 3) normalized.push(createCustomer(normalized.length + 1));
+  if (onlyBlankPlaceholders) normalized = normalized.slice(0, 1);
+  if (!normalized.length) normalized = defaultCustomers();
   return normalized;
 }
 
