@@ -1398,6 +1398,10 @@ let savedRecords = loadSavedRecords();
 let inventory = loadInventory();
 let weatherShort = '';
 
+function syncTrafficToCheckIns() {
+  current.trafficIndex = Math.min(TRAFFIC_MAX, current.customers.filter(customer => customer.checkedIn).length);
+}
+
 function makeId() {
   if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
   return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2102,6 +2106,7 @@ function toggleCheckIn(index) {
     customer.checkInTime = new Date().toISOString();
     customer.expanded = true;
   }
+  syncTrafficToCheckIns();
   saveCurrent();
   render();
 }
@@ -2320,6 +2325,7 @@ function deleteCurrentCustomer(customerId) {
     return;
   }
   current.customers = current.customers.filter(customer => customer.id !== customerId);
+  syncTrafficToCheckIns();
   saveCurrent();
   render();
   setStatus('Customer deleted');
@@ -2423,6 +2429,7 @@ function changeInventory(key, amount) {
 function resetCurrentReport() {
   if (!window.confirm('Reset the current report? Unsaved notes and customer details will be cleared.')) return;
   current = { customers: defaultCustomers(), trafficIndex: -1, extraNotes: '' };
+  syncTrafficToCheckIns();
   saveCurrent();
   render();
   setStatus('Current report reset');
@@ -2473,6 +2480,7 @@ document.getElementById('addCustomerBtn').addEventListener('click', () => {
   newCustomer.checkInTime = new Date().toISOString();
   newCustomer.expanded = true;
   current.customers.push(newCustomer);
+  syncTrafficToCheckIns();
   saveCurrent();
   render();
   document.getElementById(`card-${current.customers.at(-1).id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2501,6 +2509,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape') closeSavedRecord();
 });
 
+syncTrafficToCheckIns();
 render();
 renderInventory();
 renderSaved();
