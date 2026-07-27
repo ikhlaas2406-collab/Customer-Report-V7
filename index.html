@@ -1189,7 +1189,7 @@
   <div class="stats-row" aria-label="Current report summary">
     <div class="stat-chip green" title="Customers checked in"><span class="num" id="statIn">0</span> In</div>
     <div class="stat-chip amber"><span class="num" id="statRedir">0</span> Redirected</div>
-    <div class="stat-chip purple"><span class="num" id="statInt">0</span> Interested</div>
+    <div class="stat-chip purple"><span class="num" id="statInt">0</span> Interaction</div>
     <div class="stat-chip blue"><span class="num" id="statDemo">0</span> Demo</div>
     <div class="stat-chip"><span class="num" id="statSold">0</span> Sold</div>
   </div>
@@ -1964,7 +1964,9 @@ function toggleExpand(index) {
 function updateStats() {
   document.getElementById('statIn').textContent = current.customers.filter(c => c.checkedIn).length;
   document.getElementById('statRedir').textContent = current.customers.filter(c => c.redirected === 'Yes').length;
-  document.getElementById('statInt').textContent = current.customers.filter(c => c.interested === 'Yes').length;
+  document.getElementById('statInt').textContent = current.customers.filter(c =>
+    c.educatedAlternative === 'Yes' || c.interested === 'Yes'
+  ).length;
   document.getElementById('statDemo').textContent = current.customers.filter(c => c.demo === 'Yes').length;
   document.getElementById('statSold').textContent = current.customers.filter(c => c.sold === 'Yes').length;
 }
