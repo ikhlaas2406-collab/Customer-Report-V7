@@ -911,6 +911,12 @@
     padding: 1px 0 3px;
     scrollbar-width: none;
   }
+  .workflow-history-label {
+    margin: -2px 0 -5px;
+    color: var(--muted-2);
+    font-size: 10px;
+    letter-spacing: .2px;
+  }
   .workflow-history::-webkit-scrollbar { display: none; }
   .workflow-history-btn {
     flex: 0 0 auto;
@@ -1171,6 +1177,45 @@
     white-space: nowrap;
   }
 
+  .stats-row {
+    align-items: stretch;
+  }
+  .stat-chip {
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 3px;
+    flex-direction: column;
+    gap: 3px;
+    line-height: 1;
+    white-space: normal;
+  }
+  .stat-chip .num {
+    flex: 0 0 auto;
+    margin: 0;
+    line-height: 1;
+  }
+  .stat-chip .label {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.1;
+    font-size: 9px;
+  }
+  @media (max-width: 460px) {
+    .stats-row { gap: 4px; }
+    .stat-chip {
+      min-height: 38px;
+      padding: 5px 2px;
+      border-radius: 13px;
+      gap: 2px;
+      font-size: 8px;
+    }
+    .stat-chip .num { font-size: 12px; }
+    .stat-chip .label { font-size: 8px; letter-spacing: -.2px; }
+  }
 </style>
 </head>
 <body>
@@ -1187,11 +1232,11 @@
     </div>
   </div>
   <div class="stats-row" aria-label="Current report summary">
-    <div class="stat-chip green" title="Customers checked in"><span class="num" id="statIn">0</span> In</div>
-    <div class="stat-chip amber"><span class="num" id="statRedir">0</span> Redirected</div>
-    <div class="stat-chip purple"><span class="num" id="statInt">0</span> Interaction</div>
-    <div class="stat-chip blue"><span class="num" id="statDemo">0</span> Demo</div>
-    <div class="stat-chip"><span class="num" id="statSold">0</span> Sold</div>
+    <div class="stat-chip green" title="Customers checked in"><span class="num" id="statIn">0</span><span class="label">In</span></div>
+    <div class="stat-chip amber"><span class="num" id="statRedir">0</span><span class="label">Redirected</span></div>
+    <div class="stat-chip purple"><span class="num" id="statInt">0</span><span class="label">Interaction</span></div>
+    <div class="stat-chip blue"><span class="num" id="statDemo">0</span><span class="label">Demo</span></div>
+    <div class="stat-chip"><span class="num" id="statSold">0</span><span class="label">Sold</span></div>
   </div>
 </header>
 
@@ -1287,8 +1332,11 @@ const WORKFLOW_STEPS = [
   { field: 'is18OrOlder', label: 'Age Verification' },
   { field: 'educatedAlternative', label: 'Educated Alternative?' },
   { field: 'interested', label: 'Interested?' },
+  { field: 'prePurchasePamphlet', label: 'Pre-Purchase Pamphlet?' },
+  { field: 'businessCard', label: 'Business Card?' },
   { field: 'demo', label: 'Demo?' },
-  { field: 'sold', label: 'Sold?' }
+  { field: 'sold', label: 'Sold?' },
+  { field: 'mgmReferralPamphlet', label: 'MGM Referral Program Pamphlet?' }
 ];
 const DEMO_PRODUCTS = ['birch', 'oak', 'elm', 'sequoia'];
 const WMO = {
@@ -1326,11 +1374,14 @@ function createCustomer(customerNumber) {
     interested: null,
     is18OrOlder: null,
     educatedAlternative: null,
+    prePurchasePamphlet: null,
+    businessCard: null,
     demo: null,
     demoProduct: null,
     demoQuantity: 0,
     sold: null,
     soldProduct: null,
+    mgmReferralPamphlet: null,
     notes: '',
     expanded: false,
     workflowStep: 0
@@ -1366,11 +1417,14 @@ function normalizeCustomer(raw, fallbackNumber) {
     interested: cleanChoice(raw?.interested, ['Yes', 'No']),
     is18OrOlder: cleanChoice(raw?.is18OrOlder, ['Yes', 'No']),
     educatedAlternative: cleanChoice(raw?.educatedAlternative, ['Yes', 'No']),
+    prePurchasePamphlet: cleanChoice(raw?.prePurchasePamphlet, ['Yes', 'No']),
+    businessCard: cleanChoice(raw?.businessCard, ['Yes', 'No']),
     demo: cleanChoice(raw?.demo, ['Yes', 'No']),
     demoProduct: cleanChoice(raw?.demoProduct, DEMO_PRODUCTS),
     demoQuantity: safeQuantity(raw?.demoQuantity),
     sold: cleanChoice(raw?.sold, ['Yes', 'No']) || (soldProduct === 'IQOS' || soldProduct === 'VEEV' ? 'Yes' : soldProduct === 'NONE' ? 'No' : null),
     soldProduct,
+    mgmReferralPamphlet: cleanChoice(raw?.mgmReferralPamphlet, ['Yes', 'No']),
     notes: cleanText(raw?.notes),
     expanded: raw?.expanded === true,
     workflowStep: Number.isInteger(raw?.workflowStep) ? Math.max(0, Math.min(WORKFLOW_STEPS.length, raw.workflowStep)) : 0
@@ -1384,8 +1438,9 @@ function hasCustomerWork(customer) {
     customer?.name && !/^Customer \d+$/i.test(customer.name) ||
     customer?.checkedIn || customer?.timeIn || customer?.checkInTime ||
     customer?.redirected || customer?.interested || customer?.is18OrOlder ||
-    customer?.educatedAlternative || customer?.demo || customer?.demoProduct ||
-    customer?.demoQuantity || customer?.sold || customer?.soldProduct || customer?.notes
+    customer?.educatedAlternative || customer?.prePurchasePamphlet || customer?.businessCard ||
+    customer?.demo || customer?.demoProduct || customer?.demoQuantity ||
+    customer?.sold || customer?.soldProduct || customer?.mgmReferralPamphlet || customer?.notes
   );
 }
 
@@ -1639,24 +1694,42 @@ function buildCard(customer, index) {
   return shell;
 }
 
+function isWorkflowStepApplicable(customer, stepIndex) {
+  if (customer.redirected === 'No') return stepIndex === 0;
+  if (customer.is18OrOlder === 'No') return stepIndex <= 1;
+  if (stepIndex === 4 || stepIndex === 5) return customer.interested === 'No';
+  if (stepIndex === 6 || stepIndex === 7 || stepIndex === 8) return customer.interested === 'Yes';
+  return true;
+}
+
+function nextWorkflowStep(customer, stepIndex) {
+  let nextStep = stepIndex + 1;
+  while (nextStep < WORKFLOW_STEPS.length && !isWorkflowStepApplicable(customer, nextStep)) nextStep += 1;
+  return nextStep;
+}
+
 function isWorkflowStepComplete(customer, stepIndex) {
+  if (!isWorkflowStepApplicable(customer, stepIndex)) return false;
   if (stepIndex === 0) return customer.redirected === 'Yes' || customer.redirected === 'No';
   if (stepIndex === 1) return customer.is18OrOlder === 'Yes' || customer.is18OrOlder === 'No';
   if (stepIndex === 2) return customer.educatedAlternative === 'Yes' || customer.educatedAlternative === 'No';
   if (stepIndex === 3) return customer.interested === 'Yes' || customer.interested === 'No';
-  if (stepIndex === 4) {
+  if (stepIndex === 4) return customer.prePurchasePamphlet === 'Yes' || customer.prePurchasePamphlet === 'No';
+  if (stepIndex === 5) return customer.businessCard === 'Yes' || customer.businessCard === 'No';
+  if (stepIndex === 6) {
     return customer.demo === 'No' || (
       customer.demo === 'Yes' &&
       DEMO_PRODUCTS.includes(customer.demoProduct) &&
       safeQuantity(customer.demoQuantity) > 0
     );
   }
-  if (stepIndex === 5) {
+  if (stepIndex === 7) {
     return customer.sold === 'No' || (
       customer.sold === 'Yes' &&
       (customer.soldProduct === 'IQOS' || customer.soldProduct === 'VEEV')
     );
   }
+  if (stepIndex === 8) return customer.mgmReferralPamphlet === 'Yes' || customer.mgmReferralPamphlet === 'No';
   return false;
 }
 
@@ -1664,7 +1737,7 @@ function firstIncompleteWorkflowStep(customer) {
   if (customer.redirected === 'No') return WORKFLOW_STEPS.length;
   if (customer.is18OrOlder === 'No') return WORKFLOW_STEPS.length;
   for (let stepIndex = 0; stepIndex < WORKFLOW_STEPS.length; stepIndex += 1) {
-    if (!isWorkflowStepComplete(customer, stepIndex)) return stepIndex;
+    if (isWorkflowStepApplicable(customer, stepIndex) && !isWorkflowStepComplete(customer, stepIndex)) return stepIndex;
   }
   return WORKFLOW_STEPS.length;
 }
@@ -1674,17 +1747,20 @@ function workflowAnswerText(customer, stepIndex) {
   if (stepIndex === 1) return customer.is18OrOlder === 'Yes' ? '18+' : customer.is18OrOlder === 'No' ? '18-' : '-';
   if (stepIndex === 2) return customer.educatedAlternative || '-';
   if (stepIndex === 3) return customer.interested || '-';
-  if (stepIndex === 4) {
+  if (stepIndex === 4) return customer.prePurchasePamphlet || '-';
+  if (stepIndex === 5) return customer.businessCard || '-';
+  if (stepIndex === 6) {
     if (customer.demo === 'No') return 'No';
     if (customer.demo === 'Yes' && customer.demoProduct) {
       return `${customer.demoProduct[0].toUpperCase()}${customer.demoProduct.slice(1)} x${safeQuantity(customer.demoQuantity)}`;
     }
     return customer.demo || '-';
   }
-  if (stepIndex === 5) {
+  if (stepIndex === 7) {
     if (customer.sold === 'No') return 'No';
     return customer.soldProduct || customer.sold || '-';
   }
+  if (stepIndex === 8) return customer.mgmReferralPamphlet || '-';
   return '-';
 }
 
@@ -1707,11 +1783,14 @@ function answerWorkflowQuestion(customer, index, stepIndex, value) {
       customer.is18OrOlder = null;
       customer.educatedAlternative = null;
       customer.interested = null;
+      customer.prePurchasePamphlet = null;
+      customer.businessCard = null;
       customer.demo = null;
       customer.demoProduct = null;
       customer.demoQuantity = 0;
       customer.sold = null;
       customer.soldProduct = null;
+      customer.mgmReferralPamphlet = null;
       customer.workflowStep = WORKFLOW_STEPS.length;
     } else {
       customer.workflowStep = 1;
@@ -1720,33 +1799,49 @@ function answerWorkflowQuestion(customer, index, stepIndex, value) {
     if (value === 'No') {
       customer.educatedAlternative = null;
       customer.interested = null;
+      customer.prePurchasePamphlet = null;
+      customer.businessCard = null;
       customer.demo = null;
       customer.demoProduct = null;
       customer.demoQuantity = 0;
       customer.sold = null;
       customer.soldProduct = null;
+      customer.mgmReferralPamphlet = null;
       customer.workflowStep = WORKFLOW_STEPS.length;
     } else {
       customer.workflowStep = 2;
     }
-  } else if (stepIndex === 4) {
+  } else if (stepIndex === 3) {
+    if (value === 'No') {
+      customer.demo = null;
+      customer.demoProduct = null;
+      customer.demoQuantity = 0;
+      customer.sold = null;
+      customer.soldProduct = null;
+      customer.mgmReferralPamphlet = null;
+    } else {
+      customer.prePurchasePamphlet = null;
+      customer.businessCard = null;
+    }
+    customer.workflowStep = nextWorkflowStep(customer, stepIndex);
+  } else if (stepIndex === 6) {
     if (value === 'No') {
       customer.demoProduct = null;
       customer.demoQuantity = 0;
-      customer.workflowStep = 5;
+      customer.workflowStep = nextWorkflowStep(customer, stepIndex);
     } else {
-      customer.workflowStep = 4;
+      customer.workflowStep = stepIndex;
     }
-  } else if (stepIndex === 5) {
+  } else if (stepIndex === 7) {
     if (value === 'No') {
       customer.soldProduct = 'NONE';
-      customer.workflowStep = WORKFLOW_STEPS.length;
+      customer.workflowStep = nextWorkflowStep(customer, stepIndex);
     } else {
       if (customer.soldProduct === 'NONE') customer.soldProduct = null;
-      customer.workflowStep = 5;
+      customer.workflowStep = stepIndex;
     }
   } else {
-    customer.workflowStep = stepIndex + 1;
+    customer.workflowStep = nextWorkflowStep(customer, stepIndex);
   }
 
   saveCurrent();
@@ -1758,14 +1853,17 @@ function buildCustomerWorkflow(customer, index) {
   const workflow = document.createElement('div');
   workflow.className = 'workflow';
   const storedStep = Math.max(0, Math.min(WORKFLOW_STEPS.length, customer.workflowStep));
-  const currentStep = customer.redirected === 'No' || customer.is18OrOlder === 'No'
-    ? WORKFLOW_STEPS.length
-    : storedStep;
+  let currentStep = storedStep;
+  while (currentStep < WORKFLOW_STEPS.length && !isWorkflowStepApplicable(customer, currentStep)) currentStep += 1;
+  const applicableSteps = WORKFLOW_STEPS
+    .map((step, stepIndex) => ({ step, stepIndex }))
+    .filter(({ stepIndex }) => isWorkflowStepApplicable(customer, stepIndex));
+  const currentPosition = applicableSteps.findIndex(({ stepIndex }) => stepIndex === currentStep);
 
   const progress = document.createElement('div');
   progress.className = 'workflow-progress';
-  progress.setAttribute('aria-label', `Question ${Math.min(currentStep + 1, WORKFLOW_STEPS.length)} of ${WORKFLOW_STEPS.length}`);
-  WORKFLOW_STEPS.forEach((step, stepIndex) => {
+  progress.setAttribute('aria-label', `Question ${currentPosition >= 0 ? currentPosition + 1 : applicableSteps.length} of ${applicableSteps.length}`);
+  applicableSteps.forEach(({ step, stepIndex }) => {
     const marker = document.createElement('span');
     marker.className = `workflow-progress-step${isWorkflowStepComplete(customer, stepIndex) ? ' complete' : ''}${currentStep === stepIndex ? ' current' : ''}`;
     marker.title = step.label;
@@ -1781,6 +1879,10 @@ function buildCustomerWorkflow(customer, index) {
       return true;
     });
   if (completedSteps.length) {
+    const historyLabel = document.createElement('div');
+    historyLabel.className = 'workflow-history-label';
+    historyLabel.textContent = 'Select an answer to edit it';
+    workflow.appendChild(historyLabel);
     const history = document.createElement('div');
     history.className = 'workflow-history';
     completedSteps.forEach(({ step, stepIndex }) => {
@@ -1812,7 +1914,7 @@ function buildCustomerWorkflow(customer, index) {
   question.className = 'workflow-question';
   const kicker = document.createElement('div');
   kicker.className = 'workflow-kicker';
-  kicker.textContent = `Question ${currentStep + 1} of ${WORKFLOW_STEPS.length}`;
+  kicker.textContent = `Question ${currentPosition + 1} of ${applicableSteps.length}`;
   const title = document.createElement('h3');
   title.className = 'workflow-title';
   title.textContent = step.label;
@@ -1824,7 +1926,7 @@ function buildCustomerWorkflow(customer, index) {
   );
   question.append(kicker, title, yesNo);
 
-  if (currentStep === 4 && customer.demo === 'Yes') {
+  if (currentStep === 6 && customer.demo === 'Yes') {
     const detail = document.createElement('div');
     detail.className = 'workflow-detail';
     const productLabel = document.createElement('div');
@@ -1868,7 +1970,7 @@ function buildCustomerWorkflow(customer, index) {
     continueButton.addEventListener('click', () => {
       customer.demoQuantity = safeQuantity(quantity.value);
       if (!customer.demoProduct || customer.demoQuantity < 1) return;
-      customer.workflowStep = 5;
+      customer.workflowStep = 7;
       saveCurrent();
       rerenderCard(index);
     });
@@ -1877,7 +1979,7 @@ function buildCustomerWorkflow(customer, index) {
     question.appendChild(detail);
   }
 
-  if (currentStep === 5 && customer.sold === 'Yes') {
+  if (currentStep === 7 && customer.sold === 'Yes') {
     const detail = document.createElement('div');
     detail.className = 'workflow-detail';
     const productLabel = document.createElement('div');
@@ -1888,7 +1990,7 @@ function buildCustomerWorkflow(customer, index) {
     ['IQOS', 'VEEV'].forEach(product => {
       products.appendChild(buildWorkflowOption(product, customer.soldProduct === product, 'product', () => {
         customer.soldProduct = product;
-        customer.workflowStep = WORKFLOW_STEPS.length;
+        customer.workflowStep = 8;
         saveCurrent();
         rerenderCard(index);
         updateStats();
@@ -2019,13 +2121,19 @@ function copyReport() {
         if (customer.is18OrOlder === 'Yes') {
           if (customer.educatedAlternative) line += ` | Educated: ${customer.educatedAlternative}`;
           if (customer.interested) line += ` | Interested: ${customer.interested}`;
-          if (customer.demo === 'No') line += ' | Demo: No';
-          if (customer.demo === 'Yes' && customer.demoProduct && safeQuantity(customer.demoQuantity) > 0) {
-            const demoName = `${customer.demoProduct[0].toUpperCase()}${customer.demoProduct.slice(1)}`;
-            line += ` | Demo: ${demoName} x${safeQuantity(customer.demoQuantity)}`;
-          }
-          if (customer.sold === 'Yes' && (customer.soldProduct === 'IQOS' || customer.soldProduct === 'VEEV')) {
-            line += ` | Sold: ${customer.soldProduct}`;
+          if (customer.interested === 'No') {
+            if (customer.prePurchasePamphlet) line += ` | Pre-Purchase Pamphlet: ${customer.prePurchasePamphlet}`;
+            if (customer.businessCard) line += ` | Business Card: ${customer.businessCard}`;
+          } else {
+            if (customer.demo === 'No') line += ' | Demo: No';
+            if (customer.demo === 'Yes' && customer.demoProduct && safeQuantity(customer.demoQuantity) > 0) {
+              const demoName = `${customer.demoProduct[0].toUpperCase()}${customer.demoProduct.slice(1)}`;
+              line += ` | Demo: ${demoName} x${safeQuantity(customer.demoQuantity)}`;
+            }
+            if (customer.sold === 'Yes' && (customer.soldProduct === 'IQOS' || customer.soldProduct === 'VEEV')) {
+              line += ` | Sold: ${customer.soldProduct}`;
+            }
+            if (customer.mgmReferralPamphlet) line += ` | MGM Referral Program Pamphlet: ${customer.mgmReferralPamphlet}`;
           }
         }
       }
@@ -2177,7 +2285,10 @@ function showSavedRecord(record) {
     const demoDetail = customer.demo === 'Yes' && customer.demoProduct
       ? `${customer.demoProduct[0].toUpperCase()}${customer.demoProduct.slice(1)} x${safeQuantity(customer.demoQuantity)}`
       : (customer.demo || '-');
-    details.textContent = `Redirected: ${customer.redirected || '-'} - Age verified: ${customer.is18OrOlder || '-'} - Educated alternative: ${customer.educatedAlternative || '-'} - Interested: ${customer.interested || '-'} - Demo: ${demoDetail} - Sold: ${customer.sold || '-'}${customer.sold === 'Yes' && customer.soldProduct ? ` (${customer.soldProduct})` : ''}`;
+    const followUpDetail = customer.interested === 'No'
+      ? ` - Pre-Purchase Pamphlet: ${customer.prePurchasePamphlet || '-'} - Business Card: ${customer.businessCard || '-'}`
+      : ` - MGM Referral Program Pamphlet: ${customer.mgmReferralPamphlet || '-'}`;
+    details.textContent = `Redirected: ${customer.redirected || '-'} - Age verified: ${customer.is18OrOlder || '-'} - Educated alternative: ${customer.educatedAlternative || '-'} - Interested: ${customer.interested || '-'}${customer.interested === 'Yes' ? ` - Demo: ${demoDetail} - Sold: ${customer.sold || '-'}${customer.sold === 'Yes' && customer.soldProduct ? ` (${customer.soldProduct})` : ''}` : ''}${followUpDetail}`;
     const notes = document.createElement('p');
     notes.className = 'detail-line';
     notes.textContent = customer.notes ? `Notes: ${customer.notes}` : 'Notes: -';
